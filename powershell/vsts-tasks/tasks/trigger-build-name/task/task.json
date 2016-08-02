@@ -1,0 +1,120 @@
+{
+  "id": "B3F218D7-9BEA-4269-B12F-904AFAE237E7",
+  "name": "TriggerTFSBuildByName",
+  "friendlyName": "Trigger TFS build: by name",
+  "description": "Trigger one TFS build for sequental/parallel builds.",
+  "category": "Build",
+  "author": "Oleksiy Antonov",
+  "groups": [
+    {
+      "displayName": "Flow Control",
+      "isExpanded": "true",
+      "name": "FlowControl"
+    },
+    {
+      "displayName": "Build Definition",
+      "isExpanded": "true",
+      "name": "BuildDefinition"
+    },
+    {
+      "displayName": "Treat Build State As Succeeded",
+      "isExpanded": "true",
+      "name": "BuildResults"
+    }
+  ],
+  "version": {
+    "Major": 0,
+    "Minor": 1,
+    "Patch": 25
+  },
+  "minimumAgentVersion": "1.83.0",
+  "inputs": [
+    {
+      "name": "useSameAgentParam",
+      "type": "boolean",
+      "label": "Use the same build agent",
+      "defaultValue": "false",
+      "required": false,
+      "groupName": "FlowControl",
+      "enabled": "false"
+    },
+    {
+      "name": "enableParallelBuildParam",
+      "type": "boolean",
+      "label": "Build in parallel",
+      "defaultValue": "false",
+      "required": false,
+      "groupName": "FlowControl"
+    },
+    {
+      "name": "pollingIntervalParam",
+      "type": "string",
+      "label": "Polling interval, s",
+      "defaultValue": "15",
+      "required": true,
+      "helpMarkDown": "Polling interval of build definiton completion check.",
+      "groupName": "FlowControl",
+      "visibleRule": "enableParallelBuildParam = false"
+    },
+    {
+      "name": "buildDefinitionIdParam",
+      "type": "string",
+      "label": "Name of build definition",
+      "defaultValue": "",
+      "required": true,
+      "helpMarkDown": "",
+      "groupName": "BuildDefinition"
+    },
+    {
+      "name": "useCurrentTeamProjectParam",
+      "type": "radio",
+      "label": "Located in project:",
+      "defaultValue": "currentProject",
+      "required": false,
+      "groupName": "BuildDefinition",
+      "options": {
+        "currentProject": "Current",
+        "anotherProject": "Another"
+      }
+    },
+    {
+      "name": "teamProjectName",
+      "type": "string",
+      "label": "Team project name:",
+      "defaultValue": "",
+      "required": true,
+      "groupName": "BuildDefinition",
+      "visibleRule": "useCurrentTeamProjectParam = anotherProject",
+      "enabledRule": "useCurrentTeamProjectParam = anotherProject"
+    },
+    {
+      "name": "behaviorFailedBuildParam",
+      "type": "boolean",
+      "label": "For Failed state",
+      "defaultValue": "true",
+      "required": false,
+      "helpMarkDown": "Threat Failed state as Succeeded.",
+      "groupName": "BuildResults"
+    },
+    {
+      "name": "behaviorPartiallySucceededBuildParam",
+      "type": "boolean",
+      "label": "For Partially Succeeded state",
+      "defaultValue": "true",
+      "required": false,
+      "helpMarkDown": "Threat Partially Succeeded state as Succeeded.",
+      "groupName": "BuildResults"
+    }
+  ],
+  "instanceNameFormat": "Trigger Build $(buildDefinitionId)",
+  "execution": {
+    "PowerShell": {
+      "target": "$(currentDirectory)\\trigger-build-name.ps1",
+      "argumentFormat": "",
+      "workingDirectory": "$(currentDirectory)",
+      "platforms": [
+        "windows"
+      ]
+    }
+  }
+}

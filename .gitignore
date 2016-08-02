@@ -1,0 +1,9 @@
+﻿################################################################################
+# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
+################################################################################
+
+/powershell/vsts-tasks/tasks/trigger-build-name/Logs
+/powershell/vsts-tasks/tasks/trigger-build-id/Logs
+/powershell/vsts-tasks/tools/taskUploadToTfs/Logs
+/powershell/vsts-tasks/.vs/vsts-tasks/v14/.suo
+/powershell/vsts-tasks/.vs/config/applicationhost.config

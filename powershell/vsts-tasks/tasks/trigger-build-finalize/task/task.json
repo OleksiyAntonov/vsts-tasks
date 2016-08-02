@@ -1,0 +1,57 @@
+{
+  "id": "E0646CC6-9147-4871-80A3-494A2C1F2509",
+  "name": "TriggerBuildFinalize",
+  "friendlyName": "Trigger Builds: Finalize",
+  "description": "Wait for previous runned builds by Trigger Build: Instance steps.",
+  "category": "Build",
+  "author": "Antonov, Oleksiy",
+  "groups": [
+    {
+      "displayName": "Summary",
+      "isExpanded": "true",
+      "name": "Summary"
+    }
+  ],
+  "version": {
+    "Major": 0,
+    "Minor": 1,
+    "Patch": 1
+  },
+  "minimumAgentVersion": "1.83.0",
+  "inputs": [
+    {
+      "name": "createSummaryReport",
+      "type": "boolean",
+      "label": "Create report",
+      "defaultValue": "false",
+      "required": false,
+      "groupName": "Summary"
+    },
+    {
+      "name": "summaryReportFileName",
+      "type": "string",
+      "label": "Report file name:",
+      "defaultValue": "$(buildDefinitionId).xml",
+      "required": false,
+      "groupName": "Summary",
+      "visibleRule": "createSummaryReport = true"
+    },
+    {
+      "name": "pollingInterval",
+      "type": "string",
+      "label": "Polling Interval, s",
+      "defaultValue": "15",
+      "required": true,
+      "helpMarkDown": "Polling interval of build definiton completion check.",
+      "groupName": "Performance"
+    }
+  ],
+  "instanceNameFormat": "Waiting for builds completion",
+  "execution": {
+    "PowerShell": {
+      "target": "$(currentDirectory)\\trigger-build-finalize.ps1",
+      "argumentFormat": "",
+      "workingDirectory": "$(currentDirectory)"
+    }
+  }
+}
