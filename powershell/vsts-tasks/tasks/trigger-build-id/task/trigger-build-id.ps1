@@ -15,6 +15,8 @@ param
     [Parameter(Mandatory=$true)][string] $enableParallelBuildParam,
     [Parameter(Mandatory=$true)][string] $useSameAgentParam,
     [Parameter(Mandatory=$true)][string] $buildDefinitionIdParam,
+    [Parameter(Mandatory=$true)][string] $useCurrentTeamProjectParam,
+    [Parameter(Mandatory=$true)][string] $teamProjectNameParam,
     [Parameter(Mandatory=$true)][string] $behaviorFailedBuildParam,
     [Parameter(Mandatory=$true)][string] $behaviorPartiallySucceededBuildParam
 )
@@ -35,11 +37,10 @@ param
 
 # Stubs for debugging purposes
 [string] $pollingIntervalParam = 5
-[string] $enableParallelBuildParam = "false"
-[string] $locateByTypeParam = "false"
+#[string] $enableParallelBuildParam = "false"
 
-[string] $enableBuildDefinitionsIdsParameter = "false"
-[string] $enableBuildDefinitionsNamesParameter = "true"
+#[string] $enableBuildDefinitionsIdsParameter = "false"
+#[string] $enableBuildDefinitionsNamesParameter = "true"
 
 [string] $Local_SYSTEM_TEAMFOUNDATIONCOLLECTIONURI = "http://tfs:8080/tfs/Collection/"
 [string] $Local_SYSTEM_TEAMPROJECT = "TeamProject"
@@ -84,8 +85,6 @@ function ProcessingParameters
 {
     Write-Host "Processing parameters..."
 
-    [bool] $global:enableBuildDefinitionsIds = [bool]::Parse($global:enableBuildDefinitionsIdsParameter)
-    [bool] $global:enableBuildDefinitionsNames = [bool]::Parse($global:enableBuildDefinitionsNamesParameter)
     [bool] $global:enableParallelBuild = [bool]::Parse($global:enableParallelBuildParam)
 
     # These variables are provided by TFS
@@ -106,99 +105,22 @@ function ProcessingParameters
             $pollingValue = $DefautPollingIntervalValue
         }
     }
-
-    [bool] $res = ($global:enableBuildDefinitionsIds -and $global:enableBuildDefinitionsNames)
-
-    if ($global:enableBuildDefinitionsIds -and $global:enableBuildDefinitionsNames)
-    {
-        Write-Host "Unsupported configuration. Both of list is enabled."
-        Throw [System.InvalidOperationException] $failedBuilds
-    }
-    else
-    {
-        if (!($global:enableBuildDefinitionsIds -or $global:enableBuildDefinitionsNames))
-        {
-            Write-Host "Unsupported configuration. At least one of list should be enabled"
-            Throw [System.InvalidOperationException] $failedBuilds
-        }
-    }
 }
 
-# Convert input list of build definitions into array to check success builds
-function ConvertBuildDefinitionsList
+# Prepare of build definition parameters
+function PrepareBuildDefinition
 {
-    $global:buildDefinitionsHash = @{}
-    $global:buildDefinitionsObjects = @()
+  [string] $teamProjectUriLocal
+  [string] $nameLocal
 
-    if ($global:enableBuildDefinitionsIds)
-    {
-        $listOfBuildDefinitions = $global:listOfBuildDefinitionsIdsParameter
-    }
-    else
-    {
-        if ($global:enableBuildDefinitionsNames)
-        {
-            $listOfBuildDefinitions = $global:listOfBuildDefinitionsNamesParameter
-        }
-    }
+  $global:buildDefinitionEntry = New-Object BuildDefinitionEntry($buildDefinitionIdParam)
 
-    [string] $teamProjectUriLocal
-    [string] $nameLocal
+  Write-Host $useCurrentTeamProjectParam
 
-    $listOfBuildDefinitions.Split(";") | ForEach {
-        $teamProjectUriLocal = [string]::Empty
-        if ($_.Contains("@"))
-        {
-            $parts = $_.Split("@")
-            $teamProjectUriLocal = $parts[0]
-            $nameLocal = $parts[1]
-        }
-        else
-        {
-            $nameLocal = $_
-        }
-
-        $buildDefinitionEntry = New-Object BuildDefinitionEntry($nameLocal)
-
-        if ($global:enableBuildDefinitionsIds)
-        {
-            $buildDefinitionEntry.TfsId = $buildDefinitionEntry.Name
-        }
-
-        if (![string]::IsNullOrEmpty($teamProjectUriLocal))
-        {
-            $buildDefinitionEntry.TeamProjectUri = $Local_SYSTEM_TEAMFOUNDATIONCOLLECTIONURI + $teamProjectUriLocal
-        }
-
-        $global:buildDefinitionsHash.Add($buildDefinitionEntry.Name, $global:buildDefinitionsObjects.Count)
-        $global:buildDefinitionsObjects += $buildDefinitionEntry
-    }
-
-    # Processing named server list of build definitions
-    # Works now incorrect !!! teamProjectUri
-    if ($global:enableBuildDefinitionsNames)
-    {
-        Write-Host "Processing named server list of build definitions..."
-
-        # Create hashtable with all build definitions
-        $allbuildDefs = @{}
-
-        $allBuildDefsQuery = (Invoke-RestMethod -Uri ($teamProjectUri + $UriPartGetBuildDefinitionsList) -Method GET -UseDefaultCredentials).value | select name, id
-
-        $allBuildDefsQuery.ForEach(
-        {
-            $allBuildDefs.Add($_.name, $_.id)
-        })
-
-        # Filtering list to leave only required build definitions
-        $allBuildDefs.Keys.ForEach(
-        {
-            if ($global:buildDefinitionsHash.ContainsKey($_))
-            {
-                $global:buildDefinitionsObjects[$global:buildDefinitionsHash[$_]].TfsId = $allBuildDefs[$_]
-            }
-        })
-    }
+  #if (![string]::IsNullOrEmpty($teamProjectUriLocal))
+  #{
+  #  $buildDefinitionEntry.TeamProjectUri = $Local_SYSTEM_TEAMFOUNDATIONCOLLECTIONURI + $teamProjectUriLocal
+  #}
 }
 
 # Wait for one build completion
@@ -246,6 +168,7 @@ function WaitBuildForCompletion([BuildDefinitionEntry] $buildDefinitionEntryPara
 
 function TriggerOneBuild ([object] $buildDefinitionEntryParameter)
 {
+    Write-Host "Trigger build..."
     if ($buildDefinitionEntryParameter.TfsId -ne $DefaultTfsIdUndefined)
     {
         $body = '{ "definition": { "id": '+ $buildDefinitionEntryParameter.TfsId + '}, reason: "Manual", priority: "Normal"}'
@@ -272,17 +195,6 @@ function TriggerOneBuild ([object] $buildDefinitionEntryParameter)
     }
 }
 
-# Trigger builds
-function TriggerBuilds
-{
-    Write-Host "Trigger builds..."
-
-    $global:buildDefinitionsObjects.ForEach(
-    {
-       TriggerOneBuild $_
-    })
-}
-
 # Waiting builds for completion
 function WaitingBuildsForCompletion
 {
@@ -302,8 +214,11 @@ function WaitingBuildsForCompletion
 
 # Script Body
 ProcessingParameters
-ConvertBuildDefinitionsList
-TriggerBuilds
+PrepareBuildDefinition
+
+#ConvertBuildDefinitionsList
+
+#TriggerOneBuild $global:buildDefinitionEntry
 
 if ($totalState -eq $BuildStateSucceeded)
 {

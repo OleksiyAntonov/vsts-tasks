@@ -14,8 +14,8 @@ param
     [Parameter(Mandatory=$true)][string] $pollingIntervalParam,
     [Parameter(Mandatory=$true)][string] $enableParallelBuildParam,
     [Parameter(Mandatory=$true)][string] $useSameAgentParam,
-    [Parameter(Mandatory=$true)][string] $locateByTypeParam,
     [Parameter(Mandatory=$true)][string] $buildDefinitionIdParam,
+    [Parameter(Mandatory=$true)][string] $teamProjectNameParam,
     [Parameter(Mandatory=$true)][string] $behaviorFailedBuildParam,
     [Parameter(Mandatory=$true)][string] $behaviorPartiallySucceededBuildParam
 )
@@ -35,12 +35,8 @@ param
 [string] $Local_SYSTEM_TEAMPROJECT = $Env:SYSTEM_TEAMPROJECT
 
 # Stubs for debugging purposes
-[string] $pollingIntervalParam = 5
-[string] $enableParallelBuildParam = "false"
-[string] $locateByTypeParam = "false"
-
-[string] $enableBuildDefinitionsIdsParameter = "false"
-[string] $enableBuildDefinitionsNamesParameter = "true"
+#[string] $pollingIntervalParam = 5
+#[string] $enableParallelBuildParam = "false"
 
 [string] $Local_SYSTEM_TEAMFOUNDATIONCOLLECTIONURI = "http://tfs:8080/tfs/Collection/"
 [string] $Local_SYSTEM_TEAMPROJECT = "TeamProject"
@@ -52,8 +48,6 @@ param
 
 # Debugging substitutions
 [string] $global:enableParallelBuildParam = $enableParallelBuildParam
-[string] $global:enableBuildDefinitionsIdsParameter = $enableBuildDefinitionsIdsParameter
-[string] $global:enableBuildDefinitionsNamesParameter = $enableBuildDefinitionsNamesParameter
 
 # Class Declarations
 Add-Type -TypeDefinition @"
@@ -85,8 +79,6 @@ function ProcessingParameters
 {
     Write-Host "Processing parameters..."
 
-    [bool] $global:enableBuildDefinitionsIds = [bool]::Parse($global:enableBuildDefinitionsIdsParameter)
-    [bool] $global:enableBuildDefinitionsNames = [bool]::Parse($global:enableBuildDefinitionsNamesParameter)
     [bool] $global:enableParallelBuild = [bool]::Parse($global:enableParallelBuildParam)
 
     # These variables are provided by TFS
@@ -105,22 +97,6 @@ function ProcessingParameters
         {
             Write-Output "Polling interval must be integer and in range 5-600 s"
             $pollingValue = $DefautPollingIntervalValue
-        }
-    }
-
-    [bool] $res = ($global:enableBuildDefinitionsIds -and $global:enableBuildDefinitionsNames)
-
-    if ($global:enableBuildDefinitionsIds -and $global:enableBuildDefinitionsNames)
-    {
-        Write-Host "Unsupported configuration. Both of list is enabled."
-        Throw [System.InvalidOperationException] $failedBuilds
-    }
-    else
-    {
-        if (!($global:enableBuildDefinitionsIds -or $global:enableBuildDefinitionsNames))
-        {
-            Write-Host "Unsupported configuration. At least one of list should be enabled"
-            Throw [System.InvalidOperationException] $failedBuilds
         }
     }
 }
