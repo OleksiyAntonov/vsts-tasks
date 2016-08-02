@@ -25,6 +25,7 @@ param
 [int] $DefautPollingIntervalValue = 15
 [int] $DefaultTfsIdUndefined = -1
 [string] $BuildStateSucceeded = "succeeded"
+[string] $isAnotherProject = "anotherProject"
 
 # TFS REST API Uris
 [string] $UriPartGetBuildDefinitionsList = "/_apis/build/definitions?api-version=2.0"
@@ -36,16 +37,16 @@ param
 [string] $Local_SYSTEM_TEAMPROJECT = $Env:SYSTEM_TEAMPROJECT
 
 # Stubs for debugging purposes
-[string] $pollingIntervalParam = 5
+#[string] $pollingIntervalParam = 5
 #[string] $enableParallelBuildParam = "false"
 
 #[string] $enableBuildDefinitionsIdsParameter = "false"
 #[string] $enableBuildDefinitionsNamesParameter = "true"
 
-[string] $Local_SYSTEM_TEAMFOUNDATIONCOLLECTIONURI = "http://tfs:8080/tfs/Collection/"
-[string] $Local_SYSTEM_TEAMPROJECT = "TeamProject"
+#[string] $Local_SYSTEM_TEAMFOUNDATIONCOLLECTIONURI = "http://tfs:8080/tfs/Collection/"
+#[string] $Local_SYSTEM_TEAMPROJECT = "TeamProject"
 
-[string] $teamProjectUri = $Local_SYSTEM_TEAMFOUNDATIONCOLLECTIONURI + $Local_SYSTEM_TEAMPROJECT
+#[string] $teamProjectUri = $Local_SYSTEM_TEAMFOUNDATIONCOLLECTIONURI + $Local_SYSTEM_TEAMPROJECT
 
 [string] $totalState = $BuildStateSucceeded
 [string] $failedBuilds = "Builds was failed: "
@@ -110,17 +111,13 @@ function ProcessingParameters
 # Prepare of build definition parameters
 function PrepareBuildDefinition
 {
-  [string] $teamProjectUriLocal
-  [string] $nameLocal
-
   $global:buildDefinitionEntry = New-Object BuildDefinitionEntry($buildDefinitionIdParam)
+  $global:buildDefinitionEntry.TfsId = $buildDefinitionEntry.Name
 
-  Write-Host $useCurrentTeamProjectParam
-
-  #if (![string]::IsNullOrEmpty($teamProjectUriLocal))
-  #{
-  #  $buildDefinitionEntry.TeamProjectUri = $Local_SYSTEM_TEAMFOUNDATIONCOLLECTIONURI + $teamProjectUriLocal
-  #}
+  if (![string]::Compare($useCurrentTeamProjectParam, $isAnotherProject))
+  {
+    $buildDefinitionEntry.TeamProjectUri = $Local_SYSTEM_TEAMFOUNDATIONCOLLECTIONURI + $teamProjectNameParam
+  }
 }
 
 # Wait for one build completion
@@ -133,7 +130,9 @@ function WaitBuildForCompletion([BuildDefinitionEntry] $buildDefinitionEntryPara
 
         Write-Output $uriRequestState
 
-# $buildState = Invoke-RestMethod -Method Get -Uri $uriRequestState -UseDefaultCredentials -ContentType 'application/json'
+        $buildState = Invoke-RestMethod -Method Get -Uri $uriRequestState -UseDefaultCredentials -ContentType 'application/json'
+
+        Write-Output $buildState.status
 
         if ($buildState.status -eq "completed")
         {
@@ -168,7 +167,6 @@ function WaitBuildForCompletion([BuildDefinitionEntry] $buildDefinitionEntryPara
 
 function TriggerOneBuild ([object] $buildDefinitionEntryParameter)
 {
-    Write-Host "Trigger build..."
     if ($buildDefinitionEntryParameter.TfsId -ne $DefaultTfsIdUndefined)
     {
         $body = '{ "definition": { "id": '+ $buildDefinitionEntryParameter.TfsId + '}, reason: "Manual", priority: "Normal"}'
@@ -190,25 +188,9 @@ function TriggerOneBuild ([object] $buildDefinitionEntryParameter)
 
         if (!($enableParallelBuild))
         {
+            Write-Host "Waiting build for completion..."
             WaitBuildForCompletion $buildDefinitionEntryParameter
         }
-    }
-}
-
-# Waiting builds for completion
-function WaitingBuildsForCompletion
-{
-    Write-Host "Waiting builds for completion..."
-
-    while ($global:buildDefinitionsList.Count -ne 0)
-    {
-        $global:buildDefinitionsList.Keys.ForEach(
-        {
-            if (WaitBuildForCompletion $global:buildDefinitionsList[$_])
-            {
-                $global:buildDefinitionsList.Remove($_)
-            }
-        })
     }
 }
 
@@ -216,9 +198,7 @@ function WaitingBuildsForCompletion
 ProcessingParameters
 PrepareBuildDefinition
 
-#ConvertBuildDefinitionsList
-
-#TriggerOneBuild $global:buildDefinitionEntry
+TriggerOneBuild $global:buildDefinitionEntry
 
 if ($totalState -eq $BuildStateSucceeded)
 {
